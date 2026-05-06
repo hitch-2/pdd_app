@@ -22,6 +22,7 @@ class PDDApp extends StatelessWidget {
       title: 'ПДД Диплом',
       theme: ThemeData(primarySwatch: Colors.blue),
       // В lib/main.dart
+      debugShowCheckedModeBanner: false,
       home: const SplashScreen(),
     );
   }

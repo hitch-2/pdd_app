@@ -5,68 +5,89 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const primaryBlue = Color(0xFF4A69FF); // Основной синий из Figma
+
     return Scaffold(
       backgroundColor: const Color(0xFFF2F5F9), // Светло-серый фон как в Figma
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: CircleAvatar(
-            backgroundImage: AssetImage('assets/icons/ic_avatar_default.png'),
-          ),
-        ),
-        title: const Text(
-          "Главная",
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.more_vert, color: Colors.black),
-            onPressed: () {},
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      body: Column(
         children: [
-          _buildMenuCard(
-            title: "Практические вопросы",
-            iconPath: "assets/icons/ic_practice.png",
-            color: const Color(0xFF4A69FF), // Синий
-            onTap: () {},
+          // 1. Кастомный синий заголовок (вместо AppBar)
+          Container(
+            color: primaryBlue,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundImage: AssetImage('assets/icons/ic_avatar_default.png'),
+                      radius: 20,
+                    ),
+                    const Expanded(
+                      child: Text(
+                        "Главная",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white, // Белый текст
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.more_vert, color: Colors.white), // Белая иконка
+                      onPressed: () {},
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
-          _buildMenuCard(
-            title: "Тесты",
-            iconPath: "assets/icons/ic_tests.png",
-            color: const Color(0xFFFFC107), // Желтый
-            onTap: () {},
-          ),
-          _buildMenuCard(
-            title: "Дорожные знаки",
-            iconPath: "assets/icons/ic_signs.png",
-            color: const Color(0xFF38B48C), // Зеленый
-            onTap: () {},
-          ),
-          _buildMenuCard(
-            title: "Обучение",
-            iconPath: "assets/icons/ic_education.png",
-            color: const Color(0xFFFF5252), // Красный
-            onTap: () {},
-          ),
-          _buildMenuCard(
-            title: "История тестирования",
-            iconPath: "assets/icons/ic_history.png",
-            color: const Color(0xFFD4A373), // Коричневый
-            onTap: () {},
+
+          // 2. Список карточек
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              children: [
+                _buildMenuCard(
+                  title: "Практические вопросы",
+                  iconPath: "assets/icons/ic_practice.png",
+                  color: primaryBlue,
+                  onTap: () {},
+                ),
+                _buildMenuCard(
+                  title: "Тесты",
+                  iconPath: "assets/icons/ic_tests.png",
+                  color: const Color(0xFFFFC107),
+                  onTap: () {},
+                ),
+                _buildMenuCard(
+                  title: "Дорожные знаки",
+                  iconPath: "assets/icons/ic_signs.png",
+                  color: const Color(0xFF38B48C),
+                  onTap: () {},
+                ),
+                _buildMenuCard(
+                  title: "Обучение",
+                  iconPath: "assets/icons/ic_education.png",
+                  color: const Color(0xFFFF5252),
+                  onTap: () {},
+                ),
+                _buildMenuCard(
+                  title: "История тестирования",
+                  iconPath: "assets/icons/ic_history.png",
+                  color: const Color(0xFFD4A373),
+                  onTap: () {},
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  // Вспомогательный метод для создания карточек (Инструкция 5)
+  // Исправленный метод для создания карточек (Инструкция 5)
   Widget _buildMenuCard({
     required String title,
     required String iconPath,
@@ -77,7 +98,7 @@ class HomeScreen extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16), // Увеличенные углы карточки
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.03),
@@ -87,14 +108,18 @@ class HomeScreen extends StatelessWidget {
         ],
       ),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         leading: Container(
-          padding: const EdgeInsets.all(10),
+          // --- ИСПРАВЛЕНИЯ ЗДЕСЬ ---
+          padding: const EdgeInsets.all(4), // Уменьшили отступ рамки
+          width: 50, // Увеличили общий размер контейнера
+          height: 50,
+          // --------------------------
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1), // Светлый фон для иконки
-            borderRadius: BorderRadius.circular(10),
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12), // Скругление рамки
           ),
-          child: Image.asset(iconPath, width: 30, height: 30),
+          child: Image.asset(iconPath, fit: BoxFit.contain), // Иконка теперь больше внутри
         ),
         title: Text(
           title,
