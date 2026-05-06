@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import '../main.dart'; // Путь к TrainingScreen или главному меню
+import '../main.dart';
+import 'home_screen.dart'; // Путь к TrainingScreen или главному меню
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -14,24 +15,34 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   late Animation<double> _carAnimation;
 
   @override
+  @override
   void initState() {
     super.initState();
 
-    // Настройка анимации машины на 3 секунды
     _controller = AnimationController(
-      duration: const Duration(seconds: 3),
+      duration: const Duration(seconds: 3), // Время в пути
       vsync: this,
-    )..repeat(); // Повторяем бесконечно
+    );
 
-    // Анимация движения: от -1.5 (за левым краем) до 1.5 (за правым)
+    // Машина едет справа (1.5) налево (-1.5)
     _carAnimation = Tween<double>(begin: 1.5, end: -1.5).animate(_controller);
 
-    // Таймер перехода на следующий экран (через 4 секунды)
-    Timer(const Duration(seconds: 4), () {
+    // Запускаем цикл анимации с паузой
+    _runCarCycle();
+
+    Timer(const Duration(seconds: 6), () {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const TrainingScreen()),
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
       );
     });
+  }
+
+  // Метод для создания цикла "проезд -> пауза -> проезд"
+  void _runCarCycle() async {
+    if (!mounted) return; // Проверка, что экран еще открыт
+    _controller.forward(from: 0); // Запуск проезда
+    await Future.delayed(const Duration(seconds: 4)); // 3 сек едет + 1 сек пауза
+    _runCarCycle(); // Повтор
   }
 
   @override
