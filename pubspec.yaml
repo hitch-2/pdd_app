@@ -26,3 +26,5 @@ flutter:
   # Assets должен быть строго под flutter с отступом в 2 пробела
   assets:
     - assets/data/questions.json
+    - assets/images/
+    - assets/icons/

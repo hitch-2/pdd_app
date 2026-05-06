@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'services/db_helper.dart';
 import 'models/question_model.dart';
+import 'screens/splash_screen.dart';
 
 void main() async {
   // Гарантируем инициализацию всех систем Flutter перед запуском БД
@@ -20,7 +21,8 @@ class PDDApp extends StatelessWidget {
     return MaterialApp(
       title: 'ПДД Диплом',
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: const TrainingScreen(),
+      // В lib/main.dart
+      home: const SplashScreen(),
     );
   }
 }
