@@ -27,6 +27,18 @@ class DBHelper {
     );
   }
 
+  // Получаем пачку из 40 умных вопросов для теста
+  Future<List<Question>> getTestSession(int limit) async {
+    final db = await instance.database;
+    final result = await db.rawQuery('''
+    SELECT * FROM questions 
+    ORDER BY (weight * (RANDOM() % 100)) DESC 
+    LIMIT ?
+  ''', [limit]);
+
+    return result.map((json) => Question.fromMap(json)).toList();
+  }
+
   Future _createDB(Database db, int version) async {
     // Таблица вопросов
     await db.execute('''

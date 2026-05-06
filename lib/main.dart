@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pdd_app_172/theme.dart';
 import 'services/db_helper.dart';
 import 'models/question_model.dart';
 import 'screens/splash_screen.dart';
@@ -19,9 +20,7 @@ class PDDApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'ПДД Диплом',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      // В lib/main.dart
+      theme: appTheme, // Подключаем созданную тему
       debugShowCheckedModeBanner: false,
       home: const SplashScreen(),
     );

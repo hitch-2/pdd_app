@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pdd_app_172/screens/practice_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -53,7 +54,12 @@ class HomeScreen extends StatelessWidget {
                   title: "Практические вопросы",
                   iconPath: "assets/icons/ic_practice.png",
                   color: primaryBlue,
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const PracticeScreen()),
+                    );
+                  },
                 ),
                 _buildMenuCard(
                   title: "Тесты",
