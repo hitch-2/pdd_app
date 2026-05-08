@@ -51,7 +51,7 @@ class HomeScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
               children: [
                 _buildMenuCard(
-                  title: "Практические вопросы",
+                  title: "Практический тест",
                   iconPath: "assets/icons/ic_practice.png",
                   color: primaryBlue,
                   onTap: () {
@@ -62,7 +62,7 @@ class HomeScreen extends StatelessWidget {
                   },
                 ),
                 _buildMenuCard(
-                  title: "Тесты",
+                  title: "Эгзамен",
                   iconPath: "assets/icons/ic_tests.png",
                   color: const Color(0xFFFFC107),
                   onTap: () {},

@@ -4,7 +4,8 @@ class Question {
   final String? image;
   final List<String> options;
   final int correctOption;
-  final int weight; // Вес для умного повторения
+  final int weight;
+  final String? explanation; // <-- НОВОЕ ПОЛЕ
 
   Question({
     this.id,
@@ -12,18 +13,19 @@ class Question {
     this.image,
     required this.options,
     required this.correctOption,
-    this.weight = 1, // По умолчанию вес 1
+    this.weight = 1,
+    this.explanation, // <-- НОВОЕ ПОЛЕ
   });
 
-  // Превращаем данные из БД (Map) в объект
   factory Question.fromMap(Map<String, dynamic> map) {
     return Question(
       id: map['id'],
       text: map['text'],
       image: map['image'],
-      options: map['options'].toString().split('|'), // Храним варианты через разделитель
+      options: map['options'].toString().split('|'),
       correctOption: map['correct_option'],
       weight: map['weight'],
+      explanation: map['explanation'], // <-- НОВОЕ ПОЛЕ
     );
   }
 }

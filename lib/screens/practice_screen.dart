@@ -47,11 +47,42 @@ class _PracticeScreenState extends State<PracticeScreen> {
 
   void _nextQuestion() {
     if (currentIndex < questions.length - 1) {
+      // Если вопросы еще есть — переключаем на следующий
       setState(() {
         currentIndex++;
         selectedIndex = null;
         isAnswered = false;
       });
+    } else {
+      // Если это был последний вопрос — показываем окно завершения
+      showDialog(
+        context: context,
+        barrierDismissible: false, // Чтобы нельзя было закрыть кликом мимо
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(
+              "Тренировка завершена! 🎉",
+              style: GoogleFonts.poppins(fontWeight: FontWeight.bold)
+          ),
+          content: Text(
+            "Ты ответил на все ${questions.length} вопросов. Результаты сохранены для умного алгоритма.",
+            style: GoogleFonts.poppins(),
+          ),
+          actions: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryBlue,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () {
+                Navigator.pop(context); // Закрываем диалоговое окно
+                Navigator.pop(context); // Возвращаемся в Главное меню
+              },
+              child: Text("В меню", style: GoogleFonts.poppins(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
     }
   }
 
@@ -78,6 +109,36 @@ class _PracticeScreenState extends State<PracticeScreen> {
                       ...List.generate(currentQuestion.options.length, (index) {
                         return _buildOptionCard(index, currentQuestion);
                       }),
+
+                      if (isAnswered && currentQuestion.explanation != null) ...[
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryBlue.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppColors.primaryBlue.withOpacity(0.3)),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(Icons.info_outline, color: AppColors.primaryBlue),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  currentQuestion.explanation!,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppColors.textMain,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
                       const SizedBox(height: 40),
                       _buildControlButtons(),
                     ],

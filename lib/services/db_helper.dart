@@ -12,7 +12,7 @@ class DBHelper {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('pdd_exam.db');
+    _database = await _initDB('pdd_exam_v3.db');
     return _database!;
   }
 
@@ -48,7 +48,8 @@ class DBHelper {
         image TEXT,
         options TEXT NOT NULL,
         correct_option INTEGER NOT NULL,
-        weight INTEGER DEFAULT 1
+        weight INTEGER DEFAULT 1,
+        explanation TEXT
       )
     ''');
 
@@ -82,6 +83,7 @@ class DBHelper {
         'options': (item['options'] as List).join('|'),
         'correct_option': item['correct_option'],
         'weight': 1,
+        'explanation': item['explanation'],
       });
     }
   }
