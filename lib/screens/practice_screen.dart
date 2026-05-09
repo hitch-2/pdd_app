@@ -18,6 +18,9 @@ class _PracticeScreenState extends State<PracticeScreen> {
   bool isAnswered = false;
   bool showProgress = false;
 
+  int correctAnswers = 0;
+  int wrongAnswers = 0;
+
   // Та самая "дымка" (мягкая тень для объема)
   List<BoxShadow> get _softShadow => [
     BoxShadow(
@@ -41,6 +44,14 @@ class _PracticeScreenState extends State<PracticeScreen> {
   void _checkAnswer() async {
     if (selectedIndex == null || isAnswered) return;
     bool isCorrect = selectedIndex == questions[currentIndex].correctOption;
+
+    // Считаем стату
+    if (isCorrect) {
+      correctAnswers++;
+    } else {
+      wrongAnswers++;
+    }
+
     await DBHelper.instance.updateQuestionWeight(questions[currentIndex].id!, isCorrect);
     setState(() => isAnswered = true);
   }
@@ -99,6 +110,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
           Column(
             children: [
               _buildHeader(),
+
+              // Область со скроллом (Вопрос + Варианты + Объяснение)
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
@@ -110,6 +123,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
                         return _buildOptionCard(index, currentQuestion);
                       }),
 
+                      // Объяснение ответа (если ответил)
                       if (isAnswered && currentQuestion.explanation != null) ...[
                         const SizedBox(height: 10),
                         Container(
@@ -138,12 +152,20 @@ class _PracticeScreenState extends State<PracticeScreen> {
                           ),
                         ),
                       ],
-
-                      const SizedBox(height: 40),
-                      _buildControlButtons(),
                     ],
                   ),
                 ),
+              ),
+
+              // Фиксированная панель с кнопками внизу
+              Container(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 32), // Отступ снизу чуть больше для красоты
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  // Можно добавить легкую тень сверху, чтобы отделить скролл, если хочешь:
+                  // boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))],
+                ),
+                child: _buildControlButtons(),
               ),
             ],
           ),
@@ -158,10 +180,10 @@ class _PracticeScreenState extends State<PracticeScreen> {
               ),
             ),
 
-          // Анимированная панель прогресса (теперь опускается ниже — top: 140)
+          // Анимированная панель прогресса
           AnimatedPositioned(
             duration: const Duration(milliseconds: 500),
-            curve: Curves.easeOutBack, // Более приятная анимация "с отскоком"
+            curve: Curves.easeOutBack,
             top: showProgress ? 140 : -300,
             left: 0,
             right: 0,
@@ -193,7 +215,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
               GestureDetector(
                 onTap: () => setState(() => showProgress = !showProgress),
                 child: Text(
-                  "Practice Questions",
+                  "Практический тест", // <-- Поменяли название
                   style: GoogleFonts.poppins(
                     color: Colors.white,
                     fontSize: 18,
@@ -201,7 +223,11 @@ class _PracticeScreenState extends State<PracticeScreen> {
                   ),
                 ),
               ),
-              const Icon(Icons.notes, color: Colors.white),
+              // <-- Заменили иконку на картинку
+              IconButton(
+                icon: Image.asset('assets/icons/ic_filter.png', width: 24, color: Colors.white),
+                onPressed: () {}, // Можно добавить открытие фильтров в будущем
+              ),
             ],
           ),
         ),
@@ -211,6 +237,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
 
   Widget _buildQuestionCard(Question question) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -377,6 +404,18 @@ class _PracticeScreenState extends State<PracticeScreen> {
               )
             ],
           ),
+
+          // --- НОВЫЙ БЛОК СО СТАТИСТИКОЙ ---
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildStatBadge("Верно: $correctAnswers", const Color(0xFF52B788)),
+              _buildStatBadge("Ошибок: $wrongAnswers", const Color(0xFFEF5350)),
+            ],
+          ),
+          // ---------------------------------
+
           const SizedBox(height: 20),
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
@@ -393,6 +432,22 @@ class _PracticeScreenState extends State<PracticeScreen> {
               style: GoogleFonts.poppins(color: Colors.grey, fontWeight: FontWeight.w600)
           ),
         ],
+      ),
+    );
+  }
+
+  // Вспомогательный виджет для красивых "плашек" статистики
+  Widget _buildStatBadge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.poppins(color: color, fontWeight: FontWeight.w600, fontSize: 14),
       ),
     );
   }
