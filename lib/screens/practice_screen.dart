@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:pdd_app_172/screens/result_screen.dart';
 import '../models/question_model.dart';
 import '../services/db_helper.dart';
 import '../theme.dart';
@@ -21,6 +22,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
   int correctAnswers = 0;
   int wrongAnswers = 0;
 
+  DateTime? startTime;
+
   // Та самая "дымка" (мягкая тень для объема)
   List<BoxShadow> get _softShadow => [
     BoxShadow(
@@ -33,6 +36,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
   @override
   void initState() {
     super.initState();
+    startTime = DateTime.now();
     _loadSession();
   }
 
@@ -58,40 +62,25 @@ class _PracticeScreenState extends State<PracticeScreen> {
 
   void _nextQuestion() {
     if (currentIndex < questions.length - 1) {
-      // Если вопросы еще есть — переключаем на следующий
       setState(() {
         currentIndex++;
         selectedIndex = null;
         isAnswered = false;
       });
     } else {
-      // Если это был последний вопрос — показываем окно завершения
-      showDialog(
-        context: context,
-        barrierDismissible: false, // Чтобы нельзя было закрыть кликом мимо
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text(
-              "Тренировка завершена! 🎉",
-              style: GoogleFonts.poppins(fontWeight: FontWeight.bold)
+      // Подсчет времени
+      final duration = DateTime.now().difference(startTime!);
+      String formattedTime = "${duration.inMinutes.toString().padLeft(2, '0')}:${(duration.inSeconds % 60).toString().padLeft(2, '0')}";
+
+      // Переход на экран результатов (создадим его на следующем шаге)
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ResultScreen(
+            correctAnswers: correctAnswers,
+            totalQuestions: questions.length,
+            timeSpent: formattedTime,
           ),
-          content: Text(
-            "Ты ответил на все ${questions.length} вопросов. Результаты сохранены для умного алгоритма.",
-            style: GoogleFonts.poppins(),
-          ),
-          actions: [
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryBlue,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              onPressed: () {
-                Navigator.pop(context); // Закрываем диалоговое окно
-                Navigator.pop(context); // Возвращаемся в Главное меню
-              },
-              child: Text("В меню", style: GoogleFonts.poppins(color: Colors.white)),
-            ),
-          ],
         ),
       );
     }
@@ -247,7 +236,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
       child: Column(
         children: [
           Text(
-            question.text,
+            "${currentIndex + 1}. ${question.text}",
             textAlign: TextAlign.center,
             style: GoogleFonts.poppins(
               fontSize: 16,
@@ -363,7 +352,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
             ),
             child: Text(
-                "Далее",
+              // ЕСЛИ ЭТО ПОСЛЕДНИЙ ВОПРОС, ПИШЕМ "Завершить", ИНАЧЕ "Далее"
+                (currentIndex == questions.length - 1) ? "Завершить" : "Далее",
                 style: GoogleFonts.poppins(
                     color: Colors.white.withOpacity(isAnswered ? 1.0 : 0.7),
                     fontWeight: FontWeight.w600
