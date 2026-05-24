@@ -80,6 +80,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
             correctAnswers: correctAnswers,
             totalQuestions: questions.length,
             timeSpent: formattedTime,
+            isExam: false,
           ),
         ),
       );
