@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:pdd_app_172/screens/practice_screen.dart';
 import 'exam_screen.dart';
+import 'history_screen.dart';
+import 'study_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -83,13 +85,23 @@ class HomeScreen extends StatelessWidget {
                   title: "Обучение",
                   iconPath: "assets/icons/ic_education.png",
                   color: const Color(0xFFFF5252),
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const StudyScreen()),
+                    );
+                  },
                 ),
                 _buildMenuCard(
                   title: "История тестирования",
                   iconPath: "assets/icons/ic_history.png",
                   color: const Color(0xFFD4A373),
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const HistoryScreen()),
+                    );
+                  },
                 ),
               ],
             ),

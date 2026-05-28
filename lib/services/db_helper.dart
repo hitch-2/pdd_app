@@ -12,7 +12,7 @@ class DBHelper {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('pdd_exam_v5.db');
+    _database = await _initDB('pdd_exam_v2,0.db'); // Версия 6
     return _database!;
   }
 
@@ -25,18 +25,6 @@ class DBHelper {
       version: 1,
       onCreate: _createDB,
     );
-  }
-
-  // Получаем пачку из 40 умных вопросов для теста
-  Future<List<Question>> getTestSession(int limit) async {
-    final db = await instance.database;
-    final result = await db.rawQuery('''
-    SELECT * FROM questions 
-    ORDER BY (weight * (RANDOM() % 100)) DESC 
-    LIMIT ?
-  ''', [limit]);
-
-    return result.map((json) => Question.fromMap(json)).toList();
   }
 
   Future _createDB(Database db, int version) async {
@@ -63,13 +51,25 @@ class DBHelper {
         FOREIGN KEY (question_id) REFERENCES questions (id)
       )
     ''');
+
+    // Таблица истории тестов
+    await db.execute('''
+      CREATE TABLE test_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        test_type TEXT,
+        correct_answers INTEGER,
+        total_questions INTEGER,
+        time_spent TEXT,
+        is_passed INTEGER,
+        date TEXT
+      )
+    ''');
   }
 
-  // Метод импорта из JSON (Инструкция 6)
+  // Метод импорта из JSON
   Future<void> importQuestionsFromJson() async {
     final db = await instance.database;
 
-    // Проверяем, не пуста ли база, чтобы не дублировать
     final count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM questions'));
     if (count! > 0) return;
 
@@ -88,11 +88,20 @@ class DBHelper {
     }
   }
 
-  // Алгоритм умного повторения (Инструкция 4)
-  // Выбираем вопросы, где вес больше, с помощью случайной сортировки по весу
+  // Алгоритм умного повторения
   Future<List<Question>> getSmartQuestions(int limit) async {
     final db = await instance.database;
-    // Логика: сортируем по (weight * random). Чем больше вес, тем выше шанс оказаться в топе.
+    final result = await db.rawQuery('''
+      SELECT * FROM questions 
+      ORDER BY (weight * (RANDOM() % 100)) DESC 
+      LIMIT ?
+    ''', [limit]);
+
+    return result.map((json) => Question.fromMap(json)).toList();
+  }
+
+  Future<List<Question>> getTestSession(int limit) async {
+    final db = await instance.database;
     final result = await db.rawQuery('''
       SELECT * FROM questions 
       ORDER BY (weight * (RANDOM() % 100)) DESC 
@@ -106,11 +115,36 @@ class DBHelper {
   Future<void> updateQuestionWeight(int id, bool isCorrect) async {
     final db = await instance.database;
     if (isCorrect) {
-      // Если ответил верно — уменьшаем вес (минимум 1)
       await db.execute('UPDATE questions SET weight = MAX(1, weight - 1) WHERE id = ?', [id]);
     } else {
-      // Если ошибся — увеличиваем вес, чтобы вопрос выпадал чаще
       await db.execute('UPDATE questions SET weight = weight + 3 WHERE id = ?', [id]);
     }
+  }
+
+  // --- НОВЫЕ МЕТОДЫ ДЛЯ ИСТОРИИ ТЕСТОВ ---
+
+  // Сохранение результата теста
+  Future<void> saveTestResult({
+    required String testType,
+    required int correctAnswers,
+    required int totalQuestions,
+    required String timeSpent,
+    required bool isPassed,
+  }) async {
+    final db = await instance.database;
+    await db.insert('test_history', {
+      'test_type': testType,
+      'correct_answers': correctAnswers,
+      'total_questions': totalQuestions,
+      'time_spent': timeSpent,
+      'is_passed': isPassed ? 1 : 0,
+      'date': DateTime.now().toIso8601String(),
+    });
+  }
+
+  // Получение всей истории
+  Future<List<Map<String, dynamic>>> getTestHistory() async {
+    final db = await instance.database;
+    return await db.query('test_history', orderBy: 'id DESC');
   }
 }

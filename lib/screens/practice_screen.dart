@@ -60,7 +60,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
     setState(() => isAnswered = true);
   }
 
-  void _nextQuestion() {
+  Future<void> _nextQuestion() async {
     if (currentIndex < questions.length - 1) {
       setState(() {
         currentIndex++;
@@ -71,6 +71,16 @@ class _PracticeScreenState extends State<PracticeScreen> {
       // Подсчет времени
       final duration = DateTime.now().difference(startTime!);
       String formattedTime = "${duration.inMinutes.toString().padLeft(2, '0')}:${(duration.inSeconds % 60).toString().padLeft(2, '0')}";
+
+      bool isPassed = correctAnswers >= 32;
+      // Сохраняем в БД
+      await DBHelper.instance.saveTestResult(
+        testType: "Практический тест",
+        correctAnswers: correctAnswers,
+        totalQuestions: questions.length,
+        timeSpent: formattedTime,
+        isPassed: isPassed,
+      );
 
       // Переход на экран результатов (создадим его на следующем шаге)
       Navigator.pushReplacement(

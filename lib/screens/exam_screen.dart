@@ -53,6 +53,7 @@ class _ExamScreenState extends State<ExamScreen> {
   }
 
   // Логика завершения экзамена
+  // Логика завершения экзамена
   void _submitExam() async {
     _timer?.cancel();
     int correctAnswers = 0;
@@ -68,6 +69,17 @@ class _ExamScreenState extends State<ExamScreen> {
     // Считаем потраченное время
     int timeSpentSeconds = (40 * 60) - _secondsRemaining;
     String formattedTime = "${(timeSpentSeconds ~/ 60).toString().padLeft(2, '0')}:${(timeSpentSeconds % 60).toString().padLeft(2, '0')}";
+
+    bool isPassed = correctAnswers >= 32;
+
+    // Сохраняем в БД ТОЛЬКО ОДИН РАЗ как Экзамен
+    await DBHelper.instance.saveTestResult(
+      testType: "Экзамен",
+      correctAnswers: correctAnswers,
+      totalQuestions: questions.length,
+      timeSpent: formattedTime,
+      isPassed: isPassed,
+    );
 
     if (!mounted) return;
     Navigator.pushReplacement(
@@ -101,6 +113,7 @@ class _ExamScreenState extends State<ExamScreen> {
         children: [
           _buildHeader(),
 
+          // Скроллируемая область с вопросом
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
@@ -114,7 +127,6 @@ class _ExamScreenState extends State<ExamScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Прогресс бар
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -126,13 +138,12 @@ class _ExamScreenState extends State<ExamScreen> {
                     LinearProgressIndicator(
                       value: (currentIndex + 1) / questions.length,
                       backgroundColor: AppColors.background,
-                      color: const Color(0xFFF6CE63), // Желтый цвет
+                      color: const Color(0xFFF6CE63),
                       minHeight: 6,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     const SizedBox(height: 30),
 
-                    // Изображение
                     if (currentQuestion.image != null) ...[
                       Center(
                         child: ClipRRect(
@@ -147,14 +158,12 @@ class _ExamScreenState extends State<ExamScreen> {
                       const SizedBox(height: 20),
                     ],
 
-                    // Текст вопроса
                     Text(
                       currentQuestion.text,
                       style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textMain),
                     ),
                     const SizedBox(height: 30),
 
-                    // Варианты ответов
                     ...List.generate(currentQuestion.options.length, (index) {
                       bool isSelected = userAnswers[currentIndex] == index;
                       return GestureDetector(
@@ -183,86 +192,100 @@ class _ExamScreenState extends State<ExamScreen> {
                         ),
                       );
                     }),
+                  ],
+                ),
+              ),
+            ),
+          ),
 
-                    const SizedBox(height: 30),
-
-                    // Кнопки Назад / Далее
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: currentIndex > 0 ? () => setState(() => currentIndex--) : null,
-                            icon: const Icon(Icons.arrow_back, size: 18),
-                            label: Text("Назад", style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.textMain,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
-                              side: BorderSide(color: Colors.grey.withOpacity(0.3)),
-                            ),
-                          ),
+          // Фиксированная панель кнопок внизу
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+            decoration: BoxDecoration(
+              color: AppColors.background,
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: currentIndex > 0 ? () => setState(() => currentIndex--) : null,
+                        icon: const Icon(Icons.arrow_back, size: 18),
+                        label: Text("Назад", style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.textMain,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+                          side: BorderSide(color: Colors.grey.withOpacity(0.3)),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: currentIndex < questions.length - 1 ? () => setState(() => currentIndex++) : null,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFF6CE63),
-                              foregroundColor: AppColors.textMain,
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text("Далее", style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-                                const SizedBox(width: 8),
-                                const Icon(Icons.arrow_forward, size: 18),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-
-                    const SizedBox(height: 30),
-
-                    // Кнопка завершения экзамена
-                    SizedBox(
-                      width: double.infinity,
-                      child: TextButton.icon(
-                        onPressed: () {
-                          // Показываем предупреждение перед сдачей
-                          showDialog(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: Text("Завершить экзамен?", style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
-                              content: Text("Вы уверены? Неотвеченные вопросы будут засчитаны как ошибки.", style: GoogleFonts.poppins()),
-                              actions: [
-                                TextButton(onPressed: () => Navigator.pop(context), child: const Text("Отмена")),
-                                ElevatedButton(
-                                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF6CE63)),
-                                  onPressed: () {
-                                    Navigator.pop(context);
-                                    _submitExam();
-                                  },
-                                  child: const Text("Завершить", style: TextStyle(color: Colors.black)),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.flag, color: Colors.grey),
-                        label: Text(
-                          "Завершить экзамен",
-                          style: GoogleFonts.poppins(color: Colors.grey, decoration: TextDecoration.underline),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: currentIndex < questions.length - 1 ? () => setState(() => currentIndex++) : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFF6CE63),
+                          foregroundColor: AppColors.textMain,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text("Далее", style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                            const SizedBox(width: 8),
+                            const Icon(Icons.arrow_forward, size: 18),
+                          ],
                         ),
                       ),
                     ),
                   ],
                 ),
-              ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      // Стилизованное окно подтверждения
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          backgroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          title: Text("Завершить экзамен?", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: AppColors.textMain)),
+                          content: Text("Вы уверены? Неотвеченные вопросы будут засчитаны как ошибки.", style: GoogleFonts.poppins(color: Colors.black87)),
+                          actions: [
+                            TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: Text("Отмена", style: GoogleFonts.poppins(color: Colors.grey, fontWeight: FontWeight.w600))
+                            ),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFF6CE63),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _submitExam();
+                              },
+                              child: Text("Завершить", style: GoogleFonts.poppins(color: AppColors.textMain, fontWeight: FontWeight.w600)),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.flag, color: Colors.grey),
+                    label: Text(
+                      "Завершить экзамен",
+                      style: GoogleFonts.poppins(color: Colors.grey, decoration: TextDecoration.underline),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
