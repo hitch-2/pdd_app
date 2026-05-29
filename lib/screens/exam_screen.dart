@@ -5,6 +5,7 @@ import '../models/question_model.dart';
 import '../services/db_helper.dart';
 import '../theme.dart';
 import 'result_screen.dart';
+import 'dart:convert';
 
 class ExamScreen extends StatefulWidget {
   const ExamScreen({super.key});
@@ -57,28 +58,37 @@ class _ExamScreenState extends State<ExamScreen> {
   void _submitExam() async {
     _timer?.cancel();
     int correctAnswers = 0;
+    List<Map<String, dynamic>> detailedAnswers = []; // <-- Создаем список для деталей
 
     for (int i = 0; i < questions.length; i++) {
       bool isCorrect = userAnswers[i] == questions[i].correctOption;
       if (isCorrect) correctAnswers++;
 
-      // Обновляем веса в базе данных для умного алгоритма
+      // Записываем, как ответил пользователь
+      detailedAnswers.add({
+        "question_text": questions[i].text,
+        "user_answer": userAnswers[i] != null ? questions[i].options[userAnswers[i]!] : "Не ответил",
+        "correct_answer": questions[i].options[questions[i].correctOption],
+        "is_correct": isCorrect
+      });
+
       await DBHelper.instance.updateQuestionWeight(questions[i].id!, isCorrect);
     }
 
-    // Считаем потраченное время
     int timeSpentSeconds = (40 * 60) - _secondsRemaining;
     String formattedTime = "${(timeSpentSeconds ~/ 60).toString().padLeft(2, '0')}:${(timeSpentSeconds % 60).toString().padLeft(2, '0')}";
-
     bool isPassed = correctAnswers >= 32;
 
-    // Сохраняем в БД ТОЛЬКО ОДИН РАЗ как Экзамен
+    // Превращаем список в строку JSON
+    String answersJson = jsonEncode(detailedAnswers);
+
     await DBHelper.instance.saveTestResult(
       testType: "Экзамен",
       correctAnswers: correctAnswers,
       totalQuestions: questions.length,
       timeSpent: formattedTime,
       isPassed: isPassed,
+      answersData: answersJson, // <-- ПЕРЕДАЕМ В БАЗУ
     );
 
     if (!mounted) return;

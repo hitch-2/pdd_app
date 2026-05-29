@@ -12,7 +12,7 @@ class DBHelper {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('pdd_exam_v2,0.db'); // Версия 6
+    _database = await _initDB('pdd_exam_v2,1.db'); // Версия 6
     return _database!;
   }
 
@@ -61,7 +61,8 @@ class DBHelper {
         total_questions INTEGER,
         time_spent TEXT,
         is_passed INTEGER,
-        date TEXT
+        date TEXT,
+        answers_data TEXT -- <-- НОВОЕ ПОЛЕ ДЛЯ ДЕТАЛЕЙ ОТВЕТОВ
       )
     ''');
   }
@@ -130,6 +131,7 @@ class DBHelper {
     required int totalQuestions,
     required String timeSpent,
     required bool isPassed,
+    required String answersData,
   }) async {
     final db = await instance.database;
     await db.insert('test_history', {
@@ -139,6 +141,7 @@ class DBHelper {
       'time_spent': timeSpent,
       'is_passed': isPassed ? 1 : 0,
       'date': DateTime.now().toIso8601String(),
+      'answers_data': answersData,
     });
   }
 

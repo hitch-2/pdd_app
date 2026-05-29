@@ -4,6 +4,7 @@ import 'package:pdd_app_172/screens/result_screen.dart';
 import '../models/question_model.dart';
 import '../services/db_helper.dart';
 import '../theme.dart';
+import 'dart:convert';
 
 class PracticeScreen extends StatefulWidget {
   const PracticeScreen({super.key});
@@ -13,6 +14,7 @@ class PracticeScreen extends StatefulWidget {
 }
 
 class _PracticeScreenState extends State<PracticeScreen> {
+  List<Map<String, dynamic>> detailedAnswers = []; // <-- Добавь это
   List<Question> questions = [];
   int currentIndex = 0;
   int? selectedIndex;
@@ -49,12 +51,19 @@ class _PracticeScreenState extends State<PracticeScreen> {
     if (selectedIndex == null || isAnswered) return;
     bool isCorrect = selectedIndex == questions[currentIndex].correctOption;
 
-    // Считаем стату
     if (isCorrect) {
       correctAnswers++;
     } else {
       wrongAnswers++;
     }
+
+    // <-- ДОБАВЛЯЕМ ЗАПИСЬ ОТВЕТА
+    detailedAnswers.add({
+      "question_text": questions[currentIndex].text,
+      "user_answer": questions[currentIndex].options[selectedIndex!],
+      "correct_answer": questions[currentIndex].options[questions[currentIndex].correctOption],
+      "is_correct": isCorrect
+    });
 
     await DBHelper.instance.updateQuestionWeight(questions[currentIndex].id!, isCorrect);
     setState(() => isAnswered = true);
@@ -73,13 +82,15 @@ class _PracticeScreenState extends State<PracticeScreen> {
       String formattedTime = "${duration.inMinutes.toString().padLeft(2, '0')}:${(duration.inSeconds % 60).toString().padLeft(2, '0')}";
 
       bool isPassed = correctAnswers >= 32;
-      // Сохраняем в БД
+      String answersJson = jsonEncode(detailedAnswers); // <-- Превращаем в строку
+
       await DBHelper.instance.saveTestResult(
         testType: "Практический тест",
         correctAnswers: correctAnswers,
         totalQuestions: questions.length,
         timeSpent: formattedTime,
         isPassed: isPassed,
+        answersData: answersJson, // <-- ПЕРЕДАЕМ В БАЗУ
       );
 
       // Переход на экран результатов (создадим его на следующем шаге)

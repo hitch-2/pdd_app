@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'dart:convert'; // Для расшифровки JSON
 import '../services/db_helper.dart';
 import '../theme.dart';
+import 'history_details_screen.dart'; // Наш новый экран деталей
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -70,7 +72,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             child: isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : history.isEmpty
-                ? Center(child: Text("Вы еще не проходили тесты", style: GoogleFonts.poppins(color: Colors.grey)))
+                ? Center(child: Text("Вы еще не проходил тесты", style: GoogleFonts.poppins(color: Colors.grey)))
                 : ListView.builder(
               padding: const EdgeInsets.all(20),
               itemCount: history.length,
@@ -82,23 +84,63 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 Color statusColor = isPassed ? const Color(0xFF38934A) : const Color(0xFFD34827);
                 String statusText = isPassed ? "СДАН" : "НЕ СДАН";
 
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: bgColor,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    children: [
-                      _buildHistoryRow("Статус теста", statusText, valueColor: statusColor, isBold: true),
-                      const SizedBox(height: 12),
-                      _buildHistoryRow("Тип", item['test_type']),
-                      const SizedBox(height: 12),
-                      _buildHistoryRow("Правильных ответов", "${item['correct_answers']}/${item['total_questions']}"),
-                      const SizedBox(height: 12),
-                      _buildHistoryRow("Затраченное время", "${item['time_spent']} мин"),
-                    ],
+                return GestureDetector(
+                  onTap: () {
+                    // 1. Достаем строку с ответами из базы (если её нет, берем пустой список "[]")
+                    String rawData = item['answers_data'] ?? "[]";
+                    List<dynamic> parsedAnswers = [];
+
+                    try {
+                      // 2. Превращаем строку обратно в список
+                      parsedAnswers = jsonDecode(rawData);
+                    } catch (e) {
+                      debugPrint("Ошибка парсинга истории: $e");
+                    }
+
+                    // 3. Если ответы есть — открываем экран деталей
+                    if (parsedAnswers.isNotEmpty) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => HistoryDetailsScreen(
+                            testType: item['test_type'] ?? "Тест",
+                            answers: parsedAnswers,
+                          ),
+                        ),
+                      );
+                    } else {
+                      // Если ты проходил этот тест до того, как мы добавили детальное сохранение
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Детали для этого теста не найдены")),
+                      );
+                    }
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                        color: bgColor,
+                        borderRadius: BorderRadius.circular(16),
+                        // Добавим легкую тень для объема
+                        boxShadow: [
+                          BoxShadow(
+                              color: Colors.black.withOpacity(0.04),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4)
+                          )
+                        ]
+                    ),
+                    child: Column(
+                      children: [
+                        _buildHistoryRow("Статус теста", statusText, valueColor: statusColor, isBold: true),
+                        const SizedBox(height: 12),
+                        _buildHistoryRow("Тип", item['test_type'] ?? "Неизвестно"),
+                        const SizedBox(height: 12),
+                        _buildHistoryRow("Правильных ответов", "${item['correct_answers']}/${item['total_questions']}"),
+                        const SizedBox(height: 12),
+                        _buildHistoryRow("Затраченное время", "${item['time_spent']} мин"),
+                      ],
+                    ),
                   ),
                 );
               },
