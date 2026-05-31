@@ -28,5 +28,6 @@ flutter:
   assets:
     - assets/data/questions.json
     - assets/data/rules.json
+    - assets/data/signs.json
     - assets/images/
     - assets/icons/
