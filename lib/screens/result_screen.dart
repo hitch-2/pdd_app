@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'home_screen.dart';
 import 'practice_screen.dart';
+import 'history_screen.dart';
 
 class ResultScreen extends StatelessWidget {
   final int correctAnswers;
@@ -183,7 +184,13 @@ class ResultScreen extends StatelessWidget {
                             elevation: 0,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           ),
-                          onPressed: () {},
+                          onPressed: () {
+                            // <-- ТЕПЕРЬ ОНА ПЕРЕКИДЫВАЕТ В ИСТОРИЮ
+                            Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(builder: (context) => const HistoryScreen())
+                            );
+                          },
                           child: Text("Проверить результаты", style: GoogleFonts.poppins(color: Colors.black87, fontWeight: FontWeight.w600, fontSize: 16)),
                         ),
                       ),

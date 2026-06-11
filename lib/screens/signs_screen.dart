@@ -149,6 +149,7 @@ class _SignsScreenState extends State<SignsScreen> {
                     builder: (context) => ChapterContentScreen(
                       chapterTitle: signsChapters[index]["title"] ?? "Глава",
                       contentBlocks: contentBlocks,
+                      headerColor: const Color(0xFF38B48C),
                     ),
                   ),
                 );

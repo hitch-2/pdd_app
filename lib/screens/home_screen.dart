@@ -1,12 +1,39 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:pdd_app_172/screens/practice_screen.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'practice_screen.dart';
 import 'exam_screen.dart';
 import 'history_screen.dart';
 import 'study_screen.dart';
 import 'signs_screen.dart';
+import 'profile_dialog.dart'; // Наш новый файл профиля
 
-class HomeScreen extends StatelessWidget {
+// 1. Превратили экран в StatefulWidget
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  String? _userImagePath;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAvatar();
+  }
+
+  // Загружаем сохраненный путь к картинке профиля
+  void _loadAvatar() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _userImagePath = prefs.getString('user_image');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +43,7 @@ class HomeScreen extends StatelessWidget {
       backgroundColor: const Color(0xFFF2F5F9), // Светло-серый фон как в Figma
       body: Column(
         children: [
-          // 1. Кастомный синий заголовок (вместо AppBar)
+          // Кастомный синий заголовок
           Container(
             color: primaryBlue,
             child: SafeArea(
@@ -24,10 +51,28 @@ class HomeScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      backgroundImage: AssetImage('assets/icons/ic_avatar_default.png'),
-                      radius: 20,
+                    // --- ИНТЕРАКТИВНАЯ АВАТАРКА ---
+                    GestureDetector(
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => ProfileDialog(
+                            onProfileUpdated: _loadAvatar, // Обновляем картинку при закрытии
+                          ),
+                        );
+                      },
+                      child: CircleAvatar(
+                        radius: 22,
+                        backgroundColor: Colors.white.withOpacity(0.2),
+                        backgroundImage: _userImagePath != null ? FileImage(File(_userImagePath!)) : null,
+                        // Если картинки нет, показываем иконку человечка
+                        child: _userImagePath == null
+                            ? const Icon(Icons.person, color: Colors.white)
+                            : null,
+                      ),
                     ),
+                    // ------------------------------
+
                     const Expanded(
                       child: Text(
                         "Главная",
@@ -40,8 +85,32 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.more_vert, color: Colors.white), // Белая иконка
-                      onPressed: () {},
+                      icon: const Icon(Icons.more_vert, color: Colors.white),
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                            backgroundColor: Colors.white,
+                            title: Text("О приложении", style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("Разработчик: Абилькасым (byabi)", style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16)),
+                                const SizedBox(height: 10),
+                                Text("Дипломный проект по изучению ПДД Республики Казахстан.\nВерсия: 1.0.0", style: GoogleFonts.poppins(color: Colors.grey, fontSize: 14)),
+                              ],
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: Text("Закрыть", style: GoogleFonts.poppins(color: const Color(0xFF4A69FF), fontWeight: FontWeight.bold)),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -49,7 +118,7 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
 
-          // 2. Список карточек
+          // Список карточек
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
@@ -72,7 +141,7 @@ class HomeScreen extends StatelessWidget {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const ExamScreen()), // <-- ПЕРЕХОД НА ЭКЗАМЕН
+                      MaterialPageRoute(builder: (context) => const ExamScreen()),
                     );
                   },
                 ),
@@ -117,7 +186,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  // Исправленный метод для создания карточек (Инструкция 5)
+  // Метод для создания карточек
   Widget _buildMenuCard({
     required String title,
     required String iconPath,
@@ -128,7 +197,7 @@ class HomeScreen extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16), // Увеличенные углы карточки
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.03),
@@ -140,16 +209,14 @@ class HomeScreen extends StatelessWidget {
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         leading: Container(
-          // --- ИСПРАВЛЕНИЯ ЗДЕСЬ ---
-          padding: const EdgeInsets.all(4), // Уменьшили отступ рамки
-          width: 50, // Увеличили общий размер контейнера
+          padding: const EdgeInsets.all(4),
+          width: 50,
           height: 50,
-          // --------------------------
           decoration: BoxDecoration(
             color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12), // Скругление рамки
+            borderRadius: BorderRadius.circular(12),
           ),
-          child: Image.asset(iconPath, fit: BoxFit.contain), // Иконка теперь больше внутри
+          child: Image.asset(iconPath, fit: BoxFit.contain),
         ),
         title: Text(
           title,

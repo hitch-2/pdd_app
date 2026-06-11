@@ -25,6 +25,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
   int wrongAnswers = 0;
 
   DateTime? startTime;
+  final bool _showImages = false;
 
   // Та самая "дымка" (мягкая тень для объема)
   List<BoxShadow> get _softShadow => [
@@ -237,7 +238,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
               // <-- Заменили иконку на картинку
               IconButton(
                 icon: Image.asset('assets/icons/ic_filter.png', width: 24, color: Colors.white),
-                onPressed: () {}, // Можно добавить открытие фильтров в будущем
+                onPressed: () => setState(() => showProgress = !showProgress), // Можно добавить открытие фильтров в будущем
               ),
             ],
           ),
@@ -266,7 +267,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
               color: AppColors.textMain,
             ),
           ),
-          if (question.image != null) ...[
+          if (_showImages && question.image != null) ...[
             const SizedBox(height: 20),
             ClipRRect(
               borderRadius: BorderRadius.circular(16),

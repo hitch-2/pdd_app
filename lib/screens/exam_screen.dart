@@ -24,6 +24,9 @@ class _ExamScreenState extends State<ExamScreen> {
   Timer? _timer;
   int _secondsRemaining = 40 * 60; // 40 минут
 
+  // ТУМБЛЕР ДЛЯ ФОТО: поставь true
+  final bool _showImages = false;
+
   @override
   void initState() {
     super.initState();
@@ -154,7 +157,7 @@ class _ExamScreenState extends State<ExamScreen> {
                     ),
                     const SizedBox(height: 30),
 
-                    if (currentQuestion.image != null) ...[
+                    if (_showImages && currentQuestion.image != null) ...[
                       Center(
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(16),

@@ -153,6 +153,7 @@ class _StudyScreenState extends State<StudyScreen> {
                     builder: (context) => ChapterContentScreen(
                       chapterTitle: chapters[index]["title"] ?? "Глава",
                       contentBlocks: contentBlocks,
+                      headerColor: const Color(0xFFFF52520),
                     ),
                   ),
                 );

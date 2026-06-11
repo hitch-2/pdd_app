@@ -15,12 +15,20 @@ dependencies:
   path: ^1.9.0
   path_provider: ^2.1.2
   cupertino_icons: ^1.0.6
+  image_picker: ^1.2.2
+  shared_preferences: ^2.5.5
 
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon.png"
 
 flutter:
   uses-material-design: true
@@ -31,3 +39,4 @@ flutter:
     - assets/data/signs.json
     - assets/images/
     - assets/icons/
+    - assets/icon.png
