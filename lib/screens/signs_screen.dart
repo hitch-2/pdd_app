@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme.dart';
 import 'chapter_content_screen.dart';
 
@@ -25,11 +26,18 @@ class _SignsScreenState extends State<SignsScreen> {
 
   Future<void> _loadSigns() async {
     try {
-      final String response = await rootBundle.loadString('assets/data/signs.json');
+      final prefs = await SharedPreferences.getInstance();
+      final String? cachedData = prefs.getString('cache_signs'); // Ищем кэш знаков
+
+      String response;
+      if (cachedData != null) {
+        response = cachedData;
+      } else {
+        response = await rootBundle.loadString('assets/data/signs.json');
+      }
+
       final data = json.decode(response);
-
       if (!mounted) return;
-
       setState(() {
         signsChapters = List<Map<String, dynamic>>.from(data);
         isLoading = false;
@@ -40,7 +48,6 @@ class _SignsScreenState extends State<SignsScreen> {
         errorMessage = e.toString();
         isLoading = false;
       });
-      debugPrint("ОШИБКА ЗАГРУЗКИ ЗНАКОВ: $e");
     }
   }
 

@@ -3,15 +3,33 @@ import 'package:pdd_app_172/theme.dart';
 import 'services/db_helper.dart';
 import 'models/question_model.dart';
 import 'screens/splash_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'screens/home_screen.dart';
 
 void main() async {
-  // Гарантируем инициализацию всех систем Flutter перед запуском БД
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Инициализируем БД и импортируем вопросы из JSON
-  await DBHelper.instance.importQuestionsFromJson();
+  // ИНИЦИАЛИЗАЦИЯ SUPABASE (Вставь свои ключи сюда!)
+  await Supabase.initialize(
+    url: 'https://zktauezmxaycsydceoka.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InprdGF1ZXpteGF5Y3N5ZGNlb2thIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0Mjg3NzEsImV4cCI6MjA5NzAwNDc3MX0.7g8OSKKFM1W-5XDWe7ele8hI5uv0VDxcxzccUFokWak',
+  );
 
-  runApp(const PDDApp());
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'ПДД РК',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: const HomeScreen(),
+    );
+  }
 }
 
 class PDDApp extends StatelessWidget {

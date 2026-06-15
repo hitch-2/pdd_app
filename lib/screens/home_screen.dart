@@ -8,7 +8,11 @@ import 'exam_screen.dart';
 import 'history_screen.dart';
 import 'study_screen.dart';
 import 'signs_screen.dart';
-import 'profile_dialog.dart'; // Наш новый файл профиля
+import 'profile_dialog.dart'; //новый файл профиля
+
+import 'dart:convert';
+import 'package:flutter/services.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 // 1. Превратили экран в StatefulWidget
 class HomeScreen extends StatefulWidget {
@@ -19,6 +23,58 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+
+  // АВТОМАТИЧЕСКАЯ МИГРАЦИЯ ДАННЫХ В ОБЛАКО
+  Future<void> _migrateDataToSupabase() async {
+    try {
+      final supabase = Supabase.instance.client;
+
+      // 1. Загружаем вопросы
+      final qString = await rootBundle.loadString('assets/data/questions.json');
+      final qData = jsonDecode(qString) as List<dynamic>;
+      List<Map<String, dynamic>> questionsToInsert = [];
+      for (var q in qData) {
+        questionsToInsert.add({
+          'text': q['text'],
+          'image': q['image'],
+          'options': (q['options'] as List).join('|'), // Склеиваем массив в строку
+          'correct_option': q['correct_option'],
+          'explanation': q['explanation'],
+        });
+      }
+      await supabase.from('questions').insert(questionsToInsert);
+
+      // 2. Загружаем правила (Обучение)
+      final rString = await rootBundle.loadString('assets/data/rules.json');
+      final rData = jsonDecode(rString) as List<dynamic>;
+      List<Map<String, dynamic>> rulesToInsert = [];
+      for (var r in rData) {
+        rulesToInsert.add({
+          'title': r['title'],
+          'time_to_read': r['time'], // Меняем ключ
+          'content': r['content'],
+        });
+      }
+      await supabase.from('rules').insert(rulesToInsert);
+
+      // 3. Загружаем дорожные знаки
+      final sString = await rootBundle.loadString('assets/data/signs.json');
+      final sData = jsonDecode(sString) as List<dynamic>;
+      await supabase.from('signs').insert(sData);
+
+      // Показываем уведомление об успехе
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("ДАННЫЕ УСПЕШНО ЗАГРУЖЕНЫ В ОБЛАКО!"), backgroundColor: Colors.green),
+      );
+    } catch (e) {
+      debugPrint("Ошибка миграции: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Ошибка: $e"), backgroundColor: Colors.red),
+      );
+    }
+  }
+
   String? _userImagePath;
 
   @override
@@ -103,6 +159,13 @@ class _HomeScreenState extends State<HomeScreen> {
                               ],
                             ),
                             actions: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                  _migrateDataToSupabase(); // <-- ВОТ ТУТ МЫ ЕГО ЗАПУСКАЕМ
+                                },
+                                child: Text("ВЫГРУЗИТЬ БАЗУ В ОБЛАКО", style: GoogleFonts.poppins(color: Colors.red, fontWeight: FontWeight.bold)),
+                              ),
                               TextButton(
                                 onPressed: () => Navigator.pop(context),
                                 child: Text("Закрыть", style: GoogleFonts.poppins(color: const Color(0xFF4A69FF), fontWeight: FontWeight.bold)),

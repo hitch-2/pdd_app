@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme.dart';
 import 'chapter_content_screen.dart';
 
@@ -25,26 +26,28 @@ class _StudyScreenState extends State<StudyScreen> {
 
   Future<void> _loadChapters() async {
     try {
-      // 1. Загружаем текст из файла
-      final String response = await rootBundle.loadString('assets/data/rules.json');
+      final prefs = await SharedPreferences.getInstance();
+      final String? cachedData = prefs.getString('cache_rules'); // Ищем кэш
 
-      // 2. Превращаем текст в JSON
+      String response;
+      if (cachedData != null) {
+        response = cachedData; // Берем из облачного кэша!
+      } else {
+        response = await rootBundle.loadString('assets/data/rules.json'); // Дефолт
+      }
+
       final data = json.decode(response);
-
       if (!mounted) return;
-
       setState(() {
         chapters = List<Map<String, dynamic>>.from(data);
         isLoading = false;
       });
     } catch (e) {
       if (!mounted) return;
-      // Если что-то пошло не так, выводим ошибку на экран!
       setState(() {
         errorMessage = e.toString();
         isLoading = false;
       });
-      debugPrint("ОШИБКА ЗАГРУЗКИ ПДД: $e");
     }
   }
 
