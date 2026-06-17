@@ -160,13 +160,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             actions: [
                               TextButton(
-                                onPressed: () {
-                                  Navigator.pop(context);
-                                  _migrateDataToSupabase(); // <-- ВОТ ТУТ МЫ ЕГО ЗАПУСКАЕМ
-                                },
-                                child: Text("ВЫГРУЗИТЬ БАЗУ В ОБЛАКО", style: GoogleFonts.poppins(color: Colors.red, fontWeight: FontWeight.bold)),
-                              ),
-                              TextButton(
                                 onPressed: () => Navigator.pop(context),
                                 child: Text("Закрыть", style: GoogleFonts.poppins(color: const Color(0xFF4A69FF), fontWeight: FontWeight.bold)),
                               ),

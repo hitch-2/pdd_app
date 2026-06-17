@@ -2,12 +2,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:pdd_app_172/services/sync_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/db_helper.dart';
-import '../theme.dart';
 import '../services/sync_service.dart';
+import '../theme.dart';
+import 'admin_screen.dart'; // Подключаем новый экран админки
 
 class ProfileDialog extends StatefulWidget {
   final VoidCallback onProfileUpdated;
@@ -24,13 +24,12 @@ class _ProfileDialogState extends State<ProfileDialog> {
   final TextEditingController _nameController = TextEditingController();
   double _readinessPercent = 0.0;
 
-  // --- ПЕРЕМЕННЫЕ ДЛЯ АВТОРИЗАЦИИ ---
   bool _isLoading = false;
   bool _isLoginMode = true;
+  bool _isAdmin = false; // <-- Флаг админа
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  // Проверка, вошел ли пользователь в систему
   User? get _user => Supabase.instance.client.auth.currentUser;
 
   @override
@@ -39,6 +38,18 @@ class _ProfileDialogState extends State<ProfileDialog> {
     if (_user != null) {
       _loadProfileData();
       _loadStatistics();
+      _checkAdminRole(); // Проверяем права
+    }
+  }
+
+  Future<void> _checkAdminRole() async {
+    try {
+      final res = await Supabase.instance.client.from('user_roles').select('role').eq('user_id', _user!.id).maybeSingle();
+      if (res != null && res['role'] == 'admin') {
+        setState(() => _isAdmin = true);
+      }
+    } catch (e) {
+      debugPrint("Ошибка проверки роли: $e");
     }
   }
 
@@ -54,24 +65,17 @@ class _ProfileDialogState extends State<ProfileDialog> {
   Future<void> _loadStatistics() async {
     final history = await DBHelper.instance.getTestHistory();
     if (history.isEmpty) return;
-
-    int totalCorrect = 0;
-    int totalQuestions = 0;
-
+    int totalCorrect = 0, totalQuestions = 0;
     for (var item in history) {
       totalCorrect += (item['correct_answers'] as int);
       totalQuestions += (item['total_questions'] as int);
     }
-
-    if (totalQuestions > 0) {
-      setState(() => _readinessPercent = totalCorrect / totalQuestions);
-    }
+    if (totalQuestions > 0) setState(() => _readinessPercent = totalCorrect / totalQuestions);
   }
 
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-
     if (image != null) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('user_image', image.path);
@@ -87,18 +91,14 @@ class _ProfileDialogState extends State<ProfileDialog> {
     widget.onProfileUpdated();
   }
 
-  // --- ЛОГИКА SUPABASE ---
   Future<void> _signUp() async {
     setState(() => _isLoading = true);
     try {
-      await Supabase.instance.client.auth.signUp(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Регистрация успешна! Теперь войдите.", style: TextStyle(color: Colors.white)), backgroundColor: Colors.green));
+      await Supabase.instance.client.auth.signUp(email: _emailController.text.trim(), password: _passwordController.text.trim());
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Успешно!"), backgroundColor: Colors.green));
       setState(() => _isLoginMode = true);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Ошибка: $e", style: const TextStyle(color: Colors.white)), backgroundColor: Colors.red));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Ошибка: $e"), backgroundColor: Colors.red));
     }
     setState(() => _isLoading = false);
   }
@@ -106,21 +106,19 @@ class _ProfileDialogState extends State<ProfileDialog> {
   Future<void> _signIn() async {
     setState(() => _isLoading = true);
     try {
-      await Supabase.instance.client.auth.signInWithPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
+      await Supabase.instance.client.auth.signInWithPassword(email: _emailController.text.trim(), password: _passwordController.text.trim());
       _loadProfileData();
       _loadStatistics();
+      _checkAdminRole();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Ошибка входа: $e", style: const TextStyle(color: Colors.white)), backgroundColor: Colors.red));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Ошибка: $e"), backgroundColor: Colors.red));
     }
     setState(() => _isLoading = false);
   }
 
   Future<void> _signOut() async {
     await Supabase.instance.client.auth.signOut();
-    setState(() {}); // Перерисует интерфейс на форму входа
+    setState(() { _isAdmin = false; });
   }
 
   @override
@@ -135,7 +133,6 @@ class _ProfileDialogState extends State<ProfileDialog> {
     );
   }
 
-  // ВИДЖЕТ: ФОРМА ВХОДА И РЕГИСТРАЦИИ
   Widget _buildAuthView() {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -151,36 +148,21 @@ class _ProfileDialogState extends State<ProfileDialog> {
         TextField(
           controller: _emailController,
           keyboardType: TextInputType.emailAddress,
-          decoration: InputDecoration(
-            hintText: "Email",
-            filled: true,
-            fillColor: AppColors.background,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-          ),
+          decoration: InputDecoration(hintText: "Email", filled: true, fillColor: AppColors.background, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
         ),
         const SizedBox(height: 12),
         TextField(
           controller: _passwordController,
           obscureText: true,
-          decoration: InputDecoration(
-            hintText: "Пароль (от 6 символов)",
-            filled: true,
-            fillColor: AppColors.background,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-          ),
+          decoration: InputDecoration(hintText: "Пароль (от 6 символов)", filled: true, fillColor: AppColors.background, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
         ),
         const SizedBox(height: 24),
-        if (_isLoading)
-          const CircularProgressIndicator(color: AppColors.primaryBlue)
+        if (_isLoading) const CircularProgressIndicator(color: AppColors.primaryBlue)
         else ...[
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryBlue,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
               onPressed: _isLoginMode ? _signIn : _signUp,
               child: Text(_isLoginMode ? "Войти" : "Создать аккаунт", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
@@ -194,7 +176,6 @@ class _ProfileDialogState extends State<ProfileDialog> {
     );
   }
 
-  // ВИДЖЕТ: ПРОФИЛЬ АВТОРИЗОВАННОГО ПОЛЬЗОВАТЕЛЯ
   Widget _buildProfileView() {
     int displayPercent = (_readinessPercent * 100).toInt();
     return Column(
@@ -207,109 +188,68 @@ class _ProfileDialogState extends State<ProfileDialog> {
             IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
           ],
         ),
-        Text(_user!.email ?? "", style: GoogleFonts.poppins(fontSize: 12, color: Colors.green)), // Показываем email
-        const SizedBox(height: 20),
-
+        const SizedBox(height: 10),
         GestureDetector(
           onTap: _pickImage,
           child: Stack(
             alignment: Alignment.bottomRight,
             children: [
-              CircleAvatar(
-                radius: 50,
-                backgroundColor: AppColors.primaryBlue.withOpacity(0.1),
-                backgroundImage: _imagePath != null ? FileImage(File(_imagePath!)) : null,
-                child: _imagePath == null ? const Icon(Icons.person, size: 50, color: AppColors.primaryBlue) : null,
-              ),
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: const BoxDecoration(color: AppColors.primaryBlue, shape: BoxShape.circle),
-                child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),
-              ),
+              CircleAvatar(radius: 40, backgroundColor: AppColors.primaryBlue.withOpacity(0.1), backgroundImage: _imagePath != null ? FileImage(File(_imagePath!)) : null, child: _imagePath == null ? const Icon(Icons.person, size: 40, color: AppColors.primaryBlue) : null),
+              Container(padding: const EdgeInsets.all(6), decoration: const BoxDecoration(color: AppColors.primaryBlue, shape: BoxShape.circle), child: const Icon(Icons.camera_alt, color: Colors.white, size: 14)),
             ],
           ),
         ),
-        const SizedBox(height: 20),
-
+        const SizedBox(height: 16),
         TextField(
           controller: _nameController,
           textAlign: TextAlign.center,
           style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600),
-          decoration: InputDecoration(
-            hintText: "Ваше имя",
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-            filled: true,
-            fillColor: AppColors.background,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          ),
+          decoration: InputDecoration(hintText: "Ваше имя", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none), filled: true, fillColor: AppColors.background, contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
           onSubmitted: _saveName,
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
 
-        // НОВЫЕ КНОПКИ ДЛЯ СИНХРОНИЗАЦИИ (Логику напишем во 2-й части)
-        OutlinedButton.icon(
-          onPressed: () async {
-            setState(() => _isLoading = true);
-            try {
-              await SyncService.syncTestHistory();
-              if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("История успешно сохранена в облаке!"), backgroundColor: Colors.green));
-            } catch (e) {
-              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
-            }
-            setState(() => _isLoading = false);
-          },
-          icon: const Icon(Icons.cloud_sync, color: AppColors.primaryBlue),
-          label: const Text("Синхронизировать историю"),
-          style: OutlinedButton.styleFrom(foregroundColor: AppColors.primaryBlue, minimumSize: const Size(double.infinity, 45)),
-        ),
-        const SizedBox(height: 8),
+        // КНОПКА ПРОВЕРКИ ОБНОВЛЕНИЙ
         ElevatedButton.icon(
           onPressed: () async {
             setState(() => _isLoading = true);
             try {
               bool wasUpdated = await SyncService.checkAndDownloadUpdates();
-              if (mounted) {
-                if (wasUpdated) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("База ПДД успешно обновлена!"), backgroundColor: Colors.green));
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("У вас установлена самая актуальная версия."), backgroundColor: Colors.blue));
-                }
-              }
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(wasUpdated ? "База ПДД обновлена!" : "Установлена актуальная версия."), backgroundColor: wasUpdated ? Colors.green : Colors.blue));
             } catch (e) {
               if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
             }
             setState(() => _isLoading = false);
           },
-          icon: const Icon(Icons.system_update_alt, color: Colors.white),
-          label: const Text("Проверить обновления ПДД"),
+          icon: const Icon(Icons.system_update_alt, color: Colors.white, size: 20),
+          label: const Text("Обновления ПДД"),
           style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF52B788), foregroundColor: Colors.white, minimumSize: const Size(double.infinity, 45)),
         ),
 
-        const SizedBox(height: 24),
-        Text("Готовность к экзамену", style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey)),
-        const SizedBox(height: 16),
+        // КНОПКА АДМИНА (ПОКАЗЫВАЕТСЯ ТОЛЬКО ЕСЛИ _isAdmin == true)
+        if (_isAdmin) ...[
+          const SizedBox(height: 8),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(context); // Закрываем профиль
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminScreen()));
+            },
+            icon: const Icon(Icons.admin_panel_settings, color: Colors.white, size: 20),
+            label: const Text("Панель управления"),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple, foregroundColor: Colors.white, minimumSize: const Size(double.infinity, 45)),
+          ),
+        ],
+
+        const SizedBox(height: 20),
         Stack(
           alignment: Alignment.center,
           children: [
-            SizedBox(
-              width: 90,
-              height: 90,
-              child: CircularProgressIndicator(
-                value: _readinessPercent,
-                strokeWidth: 8,
-                backgroundColor: AppColors.background,
-                color: const Color(0xFF52B788),
-              ),
-            ),
-            Text("$displayPercent%", style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textMain)),
+            SizedBox(width: 80, height: 80, child: CircularProgressIndicator(value: _readinessPercent, strokeWidth: 8, backgroundColor: AppColors.background, color: const Color(0xFF52B788))),
+            Text("$displayPercent%", style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textMain)),
           ],
         ),
-        const SizedBox(height: 20),
-
-        TextButton(
-          onPressed: _signOut,
-          child: Text("Выйти из аккаунта", style: GoogleFonts.poppins(color: Colors.red, fontWeight: FontWeight.w600)),
-        ),
+        const SizedBox(height: 10),
+        TextButton(onPressed: _signOut, child: Text("Выйти", style: GoogleFonts.poppins(color: Colors.red, fontWeight: FontWeight.w600))),
       ],
     );
   }

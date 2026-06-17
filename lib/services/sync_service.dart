@@ -4,7 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'db_helper.dart';
 
-
 class SyncService {
   static final _supabase = Supabase.instance.client;
 
@@ -14,42 +13,47 @@ class SyncService {
     int localVersion = prefs.getInt('data_version') ?? 0;
 
     try {
-      // Смотрим, какая версия базы сейчас в облаке
-      final response = await _supabase.from('app_metadata').select('data_version').eq('id', 1).single();
+      // ИСПОЛЬЗУЕМ maybeSingle(), чтобы не было ошибки "0 rows"
+      final response = await _supabase.from('app_metadata').select('data_version').eq('id', 1).maybeSingle();
+
+      if (response == null) {
+        debugPrint('Таблица версий пуста или недоступна.');
+        return false;
+      }
+
       int serverVersion = response['data_version'] as int;
 
       if (serverVersion > localVersion) {
-        // Версия в облаке новее! Качаем всё из БД
         final questions = await _supabase.from('questions').select();
         final rules = await _supabase.from('rules').select();
         final signs = await _supabase.from('signs').select();
 
-        // Сохраняем скачанное как текст в кэш телефона
         await prefs.setString('cache_questions', jsonEncode(questions));
         await prefs.setString('cache_rules', jsonEncode(rules));
         await prefs.setString('cache_signs', jsonEncode(signs));
 
-        // Запоминаем новую версию
         await prefs.setInt('data_version', serverVersion);
-        return true; // Обновление прошло успешно
+        return true;
       }
-      return false; // Обновлений нет, у нас и так свежая база
+      return false;
     } catch (e) {
       debugPrint('Ошибка скачивания обновлений: $e');
       throw Exception('Не удалось проверить обновления. Проверьте интернет.');
     }
   }
 
-  // 2. Синхронизация истории (Берем из телефона -> Кидаем в облако)
-  static Future<void> syncTestHistory() async {
+  // 2. Синхронизация истории (С параметром тихой фоновой работы)
+  static Future<void> syncTestHistory({bool showErrors = true}) async {
     final user = _supabase.auth.currentUser;
-    if (user == null) throw Exception("Сначала войдите в аккаунт");
+    if (user == null) {
+      if (showErrors) throw Exception("Сначала войдите в аккаунт");
+      return; // Если вызвано автоматом после теста — просто молча выходим
+    }
 
     try {
       final localHistory = await DBHelper.instance.getTestHistory();
 
       for (var item in localHistory) {
-        // Проверяем по дате, есть ли уже этот тест в облаке (чтобы не дублировать)
         final exists = await _supabase
             .from('test_history')
             .select('id')
@@ -58,7 +62,6 @@ class SyncService {
             .maybeSingle();
 
         if (exists == null) {
-          // Если в облаке его нет — загружаем!
           await _supabase.from('test_history').insert({
             'user_id': user.id,
             'test_type': item['test_type'],
@@ -73,7 +76,7 @@ class SyncService {
       }
     } catch (e) {
       debugPrint('Ошибка синхронизации истории: $e');
-      throw Exception('Не удалось синхронизировать историю.');
+      if (showErrors) throw Exception('Не удалось синхронизировать историю.');
     }
   }
 }

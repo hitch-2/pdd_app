@@ -5,6 +5,7 @@ import '../models/question_model.dart';
 import '../services/db_helper.dart';
 import '../theme.dart';
 import 'dart:convert';
+import '../services/sync_service.dart';
 
 class PracticeScreen extends StatefulWidget {
   const PracticeScreen({super.key});
@@ -25,7 +26,6 @@ class _PracticeScreenState extends State<PracticeScreen> {
   int wrongAnswers = 0;
 
   DateTime? startTime;
-  final bool _showImages = false;
 
   // Та самая "дымка" (мягкая тень для объема)
   List<BoxShadow> get _softShadow => [
@@ -93,6 +93,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
         isPassed: isPassed,
         answersData: answersJson, // <-- ПЕРЕДАЕМ В БАЗУ
       );
+
+      SyncService.syncTestHistory(showErrors: false).catchError((e) => debugPrint("Автосинхронизация: $e"));
 
       // Переход на экран результатов (создадим его на следующем шаге)
       Navigator.pushReplacement(
@@ -267,16 +269,16 @@ class _PracticeScreenState extends State<PracticeScreen> {
               color: AppColors.textMain,
             ),
           ),
-          if (_showImages && question.image != null) ...[
-            const SizedBox(height: 20),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Image.asset(
-                'assets/images/${question.image}',
-                errorBuilder: (c, e, s) => Container(
-                  height: 150,
-                  color: AppColors.background,
-                  child: const Icon(Icons.image_not_supported, color: Colors.grey),
+          // Умный показ картинки
+          if (question.image != null && question.image!.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16.0),
+              child: Center(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: question.image!.startsWith('http')
+                      ? Image.network(question.image!, height: 150, fit: BoxFit.contain)
+                      : Image.asset('assets/images/${question.image}', height: 150, fit: BoxFit.contain),
                 ),
               ),
             ),

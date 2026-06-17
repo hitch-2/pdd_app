@@ -6,6 +6,7 @@ import '../services/db_helper.dart';
 import '../theme.dart';
 import 'result_screen.dart';
 import 'dart:convert';
+import '../services/sync_service.dart';
 
 class ExamScreen extends StatefulWidget {
   const ExamScreen({super.key});
@@ -23,9 +24,6 @@ class _ExamScreenState extends State<ExamScreen> {
 
   Timer? _timer;
   int _secondsRemaining = 40 * 60; // 40 минут
-
-  // ТУМБЛЕР ДЛЯ ФОТО: поставь true
-  final bool _showImages = false;
 
   @override
   void initState() {
@@ -94,6 +92,8 @@ class _ExamScreenState extends State<ExamScreen> {
       answersData: answersJson, // <-- ПЕРЕДАЕМ В БАЗУ
     );
 
+    SyncService.syncTestHistory(showErrors: false).catchError((e) => debugPrint("Автосинхронизация: $e"));
+
     if (!mounted) return;
     Navigator.pushReplacement(
       context,
@@ -157,18 +157,19 @@ class _ExamScreenState extends State<ExamScreen> {
                     ),
                     const SizedBox(height: 30),
 
-                    if (_showImages && currentQuestion.image != null) ...[
-                      Center(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: Image.asset(
-                            'assets/images/${currentQuestion.image}',
-                            fit: BoxFit.contain,
-                            errorBuilder: (c, e, s) => Container(height: 150, color: AppColors.background, child: const Icon(Icons.image, color: Colors.grey)),
+                    // Умный показ картинки
+                    if (currentQuestion.image != null && currentQuestion.image!.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16.0),
+                        child: Center(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: currentQuestion.image!.startsWith('http')
+                                ? Image.network(currentQuestion.image!, height: 150, fit: BoxFit.contain)
+                                : Image.asset('assets/images/${currentQuestion.image}', height: 150, fit: BoxFit.contain),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 20),
                     ],
 
                     Text(
