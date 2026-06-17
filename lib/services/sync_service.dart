@@ -13,7 +13,6 @@ class SyncService {
     int localVersion = prefs.getInt('data_version') ?? 0;
 
     try {
-      // ИСПОЛЬЗУЕМ maybeSingle(), чтобы не было ошибки "0 rows"
       final response = await _supabase.from('app_metadata').select('data_version').eq('id', 1).maybeSingle();
 
       if (response == null) {
@@ -42,12 +41,12 @@ class SyncService {
     }
   }
 
-  // 2. Синхронизация истории (С параметром тихой фоновой работы)
+  // 2. Синхронизация истории в облако
   static Future<void> syncTestHistory({bool showErrors = true}) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
       if (showErrors) throw Exception("Сначала войдите в аккаунт");
-      return; // Если вызвано автоматом после теста — просто молча выходим
+      return;
     }
 
     try {
@@ -77,6 +76,33 @@ class SyncService {
     } catch (e) {
       debugPrint('Ошибка синхронизации истории: $e');
       if (showErrors) throw Exception('Не удалось синхронизировать историю.');
+    }
+  }
+
+  // 3. Восстановление истории из облака (При входе)
+  static Future<void> restoreTestHistory() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return;
+
+    try {
+      final serverData = await _supabase.from('test_history').select().eq('user_id', user.id);
+      final localData = await DBHelper.instance.getTestHistory();
+      List<String> localDates = localData.map((e) => e['date'].toString()).toList();
+
+      for (var row in serverData) {
+        if (!localDates.contains(row['date'])) {
+          await DBHelper.instance.saveTestResult(
+            testType: row['test_type'],
+            correctAnswers: row['correct_answers'],
+            totalQuestions: row['total_questions'],
+            timeSpent: row['time_spent'],
+            isPassed: row['is_passed'] == 1,
+            answersData: row['answers_data'] ?? '',
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Ошибка загрузки истории из облака: $e');
     }
   }
 }

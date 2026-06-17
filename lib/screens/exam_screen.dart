@@ -1,12 +1,15 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Добавлен импорт для rootBundle
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // Добавлен импорт для SharedPreferences
+
 import '../models/question_model.dart';
 import '../services/db_helper.dart';
+import '../services/sync_service.dart';
 import '../theme.dart';
 import 'result_screen.dart';
-import 'dart:convert';
-import '../services/sync_service.dart';
 
 class ExamScreen extends StatefulWidget {
   const ExamScreen({super.key});
@@ -18,6 +21,7 @@ class ExamScreen extends StatefulWidget {
 class _ExamScreenState extends State<ExamScreen> {
   List<Question> questions = [];
   int currentIndex = 0;
+  bool isLoading = true; // <-- Добавлена переменная загрузки
 
   // Словарь для хранения ответов пользователя: Ключ = индекс вопроса, Значение = индекс ответа
   Map<int, int> userAnswers = {};
@@ -28,13 +32,62 @@ class _ExamScreenState extends State<ExamScreen> {
   @override
   void initState() {
     super.initState();
-    _loadSession();
+    _loadQuestions(); // <-- Исправлен вызов (раньше было _loadSession)
     _startTimer();
   }
 
-  void _loadSession() async {
-    final data = await DBHelper.instance.getTestSession(40);
-    setState(() => questions = data);
+  Future<void> _loadQuestions() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      // Ищем базу в облачном кэше
+      final String? cachedData = prefs.getString('cache_questions');
+
+      String response;
+      if (cachedData != null) {
+        response = cachedData;
+      } else {
+        response = await rootBundle.loadString('assets/data/questions.json');
+      }
+
+      final List<dynamic> data = json.decode(response);
+      List<Question> loadedQuestions = [];
+
+      for (var q in data) {
+        // Умная разбивка вариантов ответов
+        List<String> parsedOptions = [];
+        if (q['options'] is String) {
+          parsedOptions = (q['options'] as String).split('|');
+        } else {
+          parsedOptions = List<String>.from(q['options']);
+        }
+
+        loadedQuestions.add(Question(
+          id: q['id'],
+          text: q['text'] ?? '',
+          image: q['image'],
+          options: parsedOptions,
+          correctOption: q['correct_option'] ?? 0,
+          explanation: q['explanation'] ?? '',
+        ));
+      }
+
+      loadedQuestions.shuffle(); // Перемешиваем для экзамена
+
+      // Для экзамена оставляем ровно 40 вопросов (или твое количество)
+      if (loadedQuestions.length > 40) {
+        loadedQuestions = loadedQuestions.sublist(0, 40);
+      }
+
+      if (!mounted) return;
+      setState(() {
+        questions = loadedQuestions;
+        isLoading = false;
+      });
+    } catch (e) {
+      debugPrint("Ошибка загрузки вопросов экзамена: $e");
+      if (!mounted) return;
+      setState(() => isLoading = false);
+    }
   }
 
   void _startTimer() {
@@ -55,11 +108,10 @@ class _ExamScreenState extends State<ExamScreen> {
   }
 
   // Логика завершения экзамена
-  // Логика завершения экзамена
   void _submitExam() async {
     _timer?.cancel();
     int correctAnswers = 0;
-    List<Map<String, dynamic>> detailedAnswers = []; // <-- Создаем список для деталей
+    List<Map<String, dynamic>> detailedAnswers = [];
 
     for (int i = 0; i < questions.length; i++) {
       bool isCorrect = userAnswers[i] == questions[i].correctOption;
@@ -73,7 +125,9 @@ class _ExamScreenState extends State<ExamScreen> {
         "is_correct": isCorrect
       });
 
-      await DBHelper.instance.updateQuestionWeight(questions[i].id!, isCorrect);
+      if (questions[i].id != null) {
+        await DBHelper.instance.updateQuestionWeight(questions[i].id!, isCorrect);
+      }
     }
 
     int timeSpentSeconds = (40 * 60) - _secondsRemaining;
@@ -89,7 +143,7 @@ class _ExamScreenState extends State<ExamScreen> {
       totalQuestions: questions.length,
       timeSpent: formattedTime,
       isPassed: isPassed,
-      answersData: answersJson, // <-- ПЕРЕДАЕМ В БАЗУ
+      answersData: answersJson,
     );
 
     SyncService.syncTestHistory(showErrors: false).catchError((e) => debugPrint("Автосинхронизация: $e"));
@@ -102,7 +156,7 @@ class _ExamScreenState extends State<ExamScreen> {
           correctAnswers: correctAnswers,
           totalQuestions: questions.length,
           timeSpent: formattedTime,
-          isExam: true, // Передаем флаг экзамена!
+          isExam: true,
         ),
       ),
     );
@@ -116,7 +170,8 @@ class _ExamScreenState extends State<ExamScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (questions.isEmpty) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (questions.isEmpty) return const Scaffold(body: Center(child: Text("Вопросы не найдены")));
 
     final currentQuestion = questions[currentIndex];
 
@@ -215,7 +270,7 @@ class _ExamScreenState extends State<ExamScreen> {
           // Фиксированная панель кнопок внизу
           Container(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: AppColors.background,
             ),
             child: Column(
@@ -263,7 +318,6 @@ class _ExamScreenState extends State<ExamScreen> {
                   width: double.infinity,
                   child: TextButton.icon(
                     onPressed: () {
-                      // Стилизованное окно подтверждения
                       showDialog(
                         context: context,
                         builder: (context) => AlertDialog(
@@ -309,7 +363,7 @@ class _ExamScreenState extends State<ExamScreen> {
 
   Widget _buildHeader() {
     return Container(
-      color: const Color(0xFFF6CE63), // Желтый цвет экзамена
+      color: const Color(0xFFF6CE63),
       child: SafeArea(
         bottom: false,
         child: Padding(
