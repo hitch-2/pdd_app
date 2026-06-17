@@ -27,13 +27,14 @@ class _StudyScreenState extends State<StudyScreen> {
   Future<void> _loadChapters() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final String? cachedData = prefs.getString('cache_rules'); // Ищем кэш
+      // Ищем базу правил в облачном кэше
+      final String? cachedData = prefs.getString('cache_rules');
 
       String response;
       if (cachedData != null) {
-        response = cachedData; // Берем из облачного кэша!
+        response = cachedData; // Читаем свежак из облака!
       } else {
-        response = await rootBundle.loadString('assets/data/rules.json'); // Дефолт
+        response = await rootBundle.loadString('assets/data/rules.json'); // Резерв
       }
 
       final data = json.decode(response);

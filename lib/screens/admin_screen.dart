@@ -52,9 +52,12 @@ class _AdminScreenState extends State<AdminScreen> {
     final textCtrl = TextEditingController(text: data['text'] ?? data['title'] ?? '');
     final contentCtrl = TextEditingController(text: isNew ? '' : jsonEncode(data['content'] ?? '[]'));
 
+    final correctCtrl = TextEditingController(text: data['correct_option']?.toString() ?? '0');
+    final explanationCtrl = TextEditingController(text: data['explanation'] ?? ''); // <-- НОВОЕ ПОЛЕ
+
     // Специфично для вопросов
     final imageCtrl = TextEditingController(text: data['image'] ?? '');
-    final correctCtrl = TextEditingController(text: data['correct_option']?.toString() ?? '0');
+
 
     // Разбиваем строку options на 4 варианта
     List<String> opts = (data['options'] ?? '|||').split('|');
@@ -106,6 +109,13 @@ class _AdminScreenState extends State<AdminScreen> {
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(labelText: "Номер верного ответа (от 0 до 3)", border: OutlineInputBorder(), filled: true, fillColor: Color(0xFFE8F5E9)),
                   ),
+                  const SizedBox(height: 12),
+                  // НОВОЕ ПОЛЕ ДЛЯ ПОЯСНЕНИЯ:
+                  TextField(
+                    controller: explanationCtrl,
+                    maxLines: 2,
+                    decoration: const InputDecoration(labelText: "Пояснение (покажется после ответа)", border: OutlineInputBorder(), hintText: "Например: Согласно пункту 13.4..."),
+                  ),
                 ],
 
                 // ЕСЛИ РЕДАКТИРУЕМ ОБУЧЕНИЕ/ЗНАКИ
@@ -136,6 +146,7 @@ class _AdminScreenState extends State<AdminScreen> {
                     'image': imageCtrl.text.isEmpty ? null : imageCtrl.text,
                     'options': mergedOptions,
                     'correct_option': int.parse(correctCtrl.text),
+                    'explanation': explanationCtrl.text.isEmpty ? null : explanationCtrl.text, // <-- НОВОЕ ПОЛЕ
                   };
                 } else {
                   payload = {

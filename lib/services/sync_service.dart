@@ -8,36 +8,26 @@ class SyncService {
   static final _supabase = Supabase.instance.client;
 
   // 1. Проверка и скачивание обновлений ПДД
+  // 1. Принудительное скачивание ВСЕХ данных с сервера
   static Future<bool> checkAndDownloadUpdates() async {
-    final prefs = await SharedPreferences.getInstance();
-    int localVersion = prefs.getInt('data_version') ?? 0;
-
     try {
-      final response = await _supabase.from('app_metadata').select('data_version').eq('id', 1).maybeSingle();
+      // Игнорируем версии и просто качаем всё самое свежее напрямую из Supabase
+      // Игнорируем версии и просто качаем всё самое свежее, СТРОГО ПО ПОРЯДКУ ID
+      final questions = await _supabase.from('questions').select().order('id', ascending: true);
+      final rules = await _supabase.from('rules').select().order('id', ascending: true);
+      final signs = await _supabase.from('signs').select().order('id', ascending: true);
 
-      if (response == null) {
-        debugPrint('Таблица версий пуста или недоступна.');
-        return false;
-      }
+      final prefs = await SharedPreferences.getInstance();
 
-      int serverVersion = response['data_version'] as int;
+      // Перезаписываем старый кэш телефона новыми данными
+      await prefs.setString('cache_questions', jsonEncode(questions));
+      await prefs.setString('cache_rules', jsonEncode(rules));
+      await prefs.setString('cache_signs', jsonEncode(signs));
 
-      if (serverVersion > localVersion) {
-        final questions = await _supabase.from('questions').select();
-        final rules = await _supabase.from('rules').select();
-        final signs = await _supabase.from('signs').select();
-
-        await prefs.setString('cache_questions', jsonEncode(questions));
-        await prefs.setString('cache_rules', jsonEncode(rules));
-        await prefs.setString('cache_signs', jsonEncode(signs));
-
-        await prefs.setInt('data_version', serverVersion);
-        return true;
-      }
-      return false;
+      return true; // Всегда возвращаем успех
     } catch (e) {
       debugPrint('Ошибка скачивания обновлений: $e');
-      throw Exception('Не удалось проверить обновления. Проверьте интернет.');
+      throw Exception('Не удалось загрузить данные. Проверьте интернет.');
     }
   }
 

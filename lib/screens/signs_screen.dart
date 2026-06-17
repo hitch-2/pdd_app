@@ -27,13 +27,14 @@ class _SignsScreenState extends State<SignsScreen> {
   Future<void> _loadSigns() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final String? cachedData = prefs.getString('cache_signs'); // Ищем кэш знаков
+      // ИЩЕМ БАЗУ ЗНАКОВ В КЭШЕ
+      final String? cachedData = prefs.getString('cache_signs');
 
       String response;
       if (cachedData != null) {
-        response = cachedData;
+        response = cachedData; // Читаем свежак из облака
       } else {
-        response = await rootBundle.loadString('assets/data/signs.json');
+        response = await rootBundle.loadString('assets/data/signs.json'); // Резерв
       }
 
       final data = json.decode(response);

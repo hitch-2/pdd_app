@@ -144,6 +144,14 @@ class _ProfileDialogState extends State<ProfileDialog> {
             IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
           ],
         ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            "Зарегистрируйтесь для сохранения прогресса",
+            style: GoogleFonts.poppins(fontSize: 13, color: Colors.orange.shade800, fontWeight: FontWeight.w600),
+          ),
+        ),
+        const SizedBox(height: 20),
         const SizedBox(height: 20),
         TextField(
           controller: _emailController,

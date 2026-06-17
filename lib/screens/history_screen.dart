@@ -4,6 +4,7 @@ import 'dart:convert'; // Для расшифровки JSON
 import '../services/db_helper.dart';
 import '../theme.dart';
 import 'history_details_screen.dart'; // Наш новый экран деталей
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -67,8 +68,32 @@ class _HistoryScreenState extends State<HistoryScreen> {
             ),
           ),
 
+          // ПРОВЕРКА НА АВТОРИЗАЦИЮ И РЫЖАЯ ШТОРКА
+          if (Supabase.instance.client.auth.currentUser == null)
+            Container(
+              margin: const EdgeInsets.only(left: 16, right: 16, top: 16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.orange.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.orange.shade800),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      "Зарегистрируйтесь для сохранения прогресса в облаке",
+                      style: GoogleFonts.poppins(color: Colors.orange.shade900, fontWeight: FontWeight.w600, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           // Список карточек
           Expanded(
+
             child: isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : history.isEmpty
